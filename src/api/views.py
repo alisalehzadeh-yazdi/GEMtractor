@@ -19,6 +19,7 @@ import logging
 import os
 import tempfile
 import urllib
+import csv
 
 from django.conf import settings
 from django.http import (HttpResponseBadRequest, HttpResponseServerError,
@@ -85,6 +86,9 @@ def get_session_data (request):
   files = []
   if Constants.SESSION_MODEL_TYPE in request.session and request.session[Constants.SESSION_MODEL_TYPE] == Constants.SESSION_MODEL_TYPE_UPLOAD:
     files.append (request.session[Constants.SESSION_MODEL_ID] + " (" + Utils.human_readable_bytes (os.path.getsize(Utils.get_model_path (request.session[Constants.SESSION_MODEL_TYPE], request.session[Constants.SESSION_MODEL_ID], request.session.session_key))) + ")")
+  fbpath = Utils.get_upload_path (request.session.session_key) + "-fb-results"
+  if os.path.isfile(fbpath):
+      files.append ("FB results (" + Utils.human_readable_bytes (os.path.getsize(fbpath)) + ")")
   s = {}
   for key, value in request.session.items ():
     s[key] = value
@@ -110,6 +114,7 @@ def clear_data (request):
   """
   if Constants.SESSION_MODEL_TYPE in request.session and request.session[Constants.SESSION_MODEL_TYPE] == Constants.SESSION_MODEL_TYPE_UPLOAD:
     os.remove (Utils.get_model_path (request.session[Constants.SESSION_MODEL_TYPE], request.session[Constants.SESSION_MODEL_ID], request.session.session_key))
+  Utils.rm_flux_file (request)
   Utils.del_session_key (request, None, Constants.SESSION_HAS_SESSION)
   Utils.del_session_key (request, None, Constants.SESSION_MODEL_ID)
   Utils.del_session_key (request, None, Constants.SESSION_MODEL_NAME)
@@ -242,10 +247,23 @@ def get_network (request):
       if len (network.species) + len (network.reactions) + len (network.genes) + len (network.gene_complexes) > settings.MAX_ENTITIES_FILTER:
         raise TooBigForBrowser ("This model is probably too big for your browser... It contains "+str (len (network.species))+" species, "+str (len (network.reactions))+" reactions, "+str (len (network.genes))+" genes, and "+str (len (network.gene_complexes))+" gene complexes. We won't load it for filtering, as you're browser is very likely to die when trying to process that amount of data.. Max is currently set to "+str (settings.MAX_ENTITIES_FILTER)+" entities in total. Please export it w/o filtering or use the API instead.")
       net = network.serialize()
+      fluxfile = Utils.get_upload_path (request.session.session_key) + "-fb-results"
+      fluxes = {}
+      fbpath = Utils.get_upload_path (request.session.session_key) + "-fb-results"
+      if os.path.isfile(fbpath):
+        with open(fbpath) as csvDataFile:
+          csvReader = csv.reader(csvDataFile)
+          for row in csvReader:
+            if Utils.is_number (row[0]):
+              fluxes[row[1]] = row[0]
+            else:
+              fluxes[row[0]] = row[1]
+
       __logger.info ("serialised the network")
       return JsonResponse ({
             "status":"success",
             "network":net,
+            "fluxes": fluxes,
             "filter": {
             Constants.SESSION_FILTER_SPECIES: filter_species,
             Constants.SESSION_FILTER_REACTION: filter_reaction,
@@ -475,6 +493,7 @@ def select_bigg_model (request):
     request.session[Constants.SESSION_MODEL_ID] = data["bigg_id"]
     request.session[Constants.SESSION_MODEL_NAME] = data["bigg_id"]
     request.session[Constants.SESSION_MODEL_TYPE] = Constants.SESSION_MODEL_TYPE_BIGG
+    Utils.rm_flux_file (request)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_SPECIES)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_REACTION)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_ENZYMES)
@@ -589,6 +608,7 @@ def select_biomodel (request):
     request.session[Constants.SESSION_MODEL_ID] = data["biomodels_id"]
     request.session[Constants.SESSION_MODEL_NAME] = data["biomodels_id"]
     request.session[Constants.SESSION_MODEL_TYPE] = Constants.SESSION_MODEL_TYPE_BIOMODELS
+    Utils.rm_flux_file (request)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_SPECIES)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_REACTION)
     Utils.del_session_key (request, {}, Constants.SESSION_FILTER_ENZYMES)
@@ -654,6 +674,8 @@ def serve_file (request, file_name, file_type):
   :return: HTTP 200 and the file or 404 if no such file
   :rtype: `django:HttpResponse <https://docs.djangoproject.com/en/2.2/ref/request-response/#httpresponse-objects>`_
   """
+  if request.session.session_key is None:
+    return HttpResponseBadRequest("bad session")
   file_path = Utils.create_generated_file_web (request.session.session_key)
   if not os.path.exists(file_path):
     return HttpResponseBadRequest("file does not exist")
@@ -999,7 +1021,7 @@ def execute (request):
   
   if export["network_type"] == "en":
     net = gemtractor.extract_network_from_sbml ()
-    net.calc_genenet ()
+    # net.calc_genenet ()
     if export["network_format"] == "sbml":
       net.export_en_sbml (outputFile.name, gemtractor, sbml.getModel ().getId (), sbml.getModel ().getName (), 
           filter_species = filter_species, 
@@ -1041,7 +1063,7 @@ def execute (request):
         return HttpResponseServerError ("couldn't generate the csv file")
   elif export["network_type"] == "rn":
     net = gemtractor.extract_network_from_sbml ()
-    net.calc_reaction_net ()
+    # net.calc_reaction_net ()
     if export["network_format"] == "sbml":
       net.export_rn_sbml (outputFile.name, gemtractor, sbml.getModel ().getId () + "_RN", sbml.getModel ().getName () + " converted to ReactionNetwork",
           filter_species = filter_species, 
@@ -1128,6 +1150,43 @@ def status (request):
   """
   get the status of this instance
   
+  this will clean obsolete files
+  
+  send the health-secret as JSON POST to get health information about this instance:
+  
+  .. code-block:: json
+  
+    {"secret": "XXXX"}
+  
+  this will then return a json object listing how many files and data we store, such as:
+  
+  .. code-block:: json
+  
+    {
+      "status": "success",
+      "cache": {
+        "biomodels": {
+          "nfiles": 8,
+          "size": 212254013
+        },
+        "bigg": {
+          "nfiles": 5,
+          "size": 59429817
+        }
+      },
+      "user": {
+        "uploaded": {
+          "nfiles": 0,
+          "size": 0
+        },
+        "generated": {
+          "nfiles": 0,
+          "size": 0
+        }
+      }
+    }
+  
+  
   :param request: the request
   :type request: `django:HttpRequest <https://docs.djangoproject.com/en/2.2/_modules/django/http/request/#HttpRequest>`_
   
@@ -1136,5 +1195,16 @@ def status (request):
   """
   
   Utils.cleanup ()
+  
+  response = {"status": "success"}
+  
+  if request.method == 'POST':
+    succ, data = parse_json_body (request, [])
+    if not succ:
+      return HttpResponseBadRequest(data)
+    
+    if settings.HEALTH_SECRET == "" or ("secret" in data and data["secret"] == settings.HEALTH_SECRET):
+      Utils.collect_stats (response)
+  
   # TODO bit more information
-  return JsonResponse ({"status": "success"})
+  return JsonResponse (response)

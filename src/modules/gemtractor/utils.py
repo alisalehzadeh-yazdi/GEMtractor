@@ -22,6 +22,7 @@ import os
 import re
 import time
 import urllib.request
+from shutil import copyfile
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -60,7 +61,8 @@ class Utils:
             os.remove (os.path.join (dirName, fname))
           except Exception as e:
             Utils.__logger.critical('error deleting old file: ' + os.path.join (dirName, fname) + " -- error: " + getattr(e, 'message', repr(e)))
-            
+    
+  
   
   @staticmethod
   def cleanup ():
@@ -73,7 +75,60 @@ class Utils:
     Utils.__cleanup (os.path.join (settings.STORAGE, "cache", "bigg"), settings.CACHE_BIGG_MODEL)
     Utils.__cleanup (os.path.join (settings.STORAGE, Constants.STORAGE_GENERATED_DIR), settings.KEEP_GENERATED)
     Utils.__cleanup (os.path.join (settings.STORAGE, Constants.STORAGE_UPLOAD_DIR), settings.KEEP_UPLOADED)
+            
   
+  
+  @staticmethod
+  def rm_flux_file (request):
+    fbpath = Utils.get_upload_path (request.session.session_key) + "-fb-results"
+    if os.path.isfile(fbpath):
+        os.remove (fbpath)
+  
+  @staticmethod
+  def __collect_stats (root_dir):
+    """
+    collect some stats about the files below root_dir
+    
+    :param root_dir: the root directory
+    :type root_dir: str
+    
+    :return: tupel of number of files and the sum of their sizes
+    :rtype: typel of ints
+    """
+    nfiles = 0
+    size = 0
+    for dirName, subdirList, fileList in os.walk(root_dir):
+      for fname in fileList:
+        nfiles += 1
+        size += os.path.getsize (os.path.join (dirName, fname))
+    
+    return nfiles, size
+  
+  @staticmethod
+  def collect_stats (response_obj):
+    """
+    collect some health stats about this instance
+    
+    will check cached and uploaded files and their sizes
+    
+    :param response_obj: the response object to attach the information to
+    :type response_obj: dict
+    """
+    response_obj['cache'] = {}
+    response_obj['user'] = {}
+    
+    nfiles, size = Utils.__collect_stats (os.path.join (settings.STORAGE, "cache", "biomodels"))
+    response_obj['cache']['biomodels'] = {"nfiles" : nfiles, "size": size}
+    
+    nfiles, size = Utils.__collect_stats (os.path.join (settings.STORAGE, "cache", "bigg"))
+    response_obj['cache']['bigg'] = {"nfiles" : nfiles, "size": size}
+    
+    nfiles, size = Utils.__collect_stats (os.path.join (settings.STORAGE,  Constants.STORAGE_UPLOAD_DIR))
+    response_obj['user']['uploaded'] = {"nfiles" : nfiles, "size": size}
+    
+    nfiles, size = Utils.__collect_stats (os.path.join (settings.STORAGE,  Constants.STORAGE_GENERATED_DIR))
+    response_obj['user']['generated'] = {"nfiles" : nfiles, "size": size}
+    
   
   @staticmethod
   def add_model_note (model, filter_species, filter_reactions, filter_enzymes, filter_enzyme_complexes, remove_reaction_enzymes_removed, remove_ghost_species, discard_fake_enzymes, remove_reaction_missing_species, removing_enzyme_removes_complex):
@@ -133,7 +188,7 @@ class Utils:
       for s in filter_enzyme_complexes:
         additional_note = additional_note + "<li>"+s+"</li>"
       additional_note = additional_note + "</ul>"
-    additional_note = additional_note + "<p>Remove reactions which's enzymes are removed: " +str(remove_reaction_enzymes_removed)+ "</p>"
+    additional_note = additional_note + "<p>Remove reactions whose enzymes are removed: " +str(remove_reaction_enzymes_removed)+ "</p>"
     additional_note = additional_note + "<p>Remove ghost species: " +str(remove_ghost_species)+ "</p>"
     additional_note = additional_note + "<p>Discard fake enzymes: " +str(discard_fake_enzymes)+ "</p>"
     additional_note = additional_note + "<p>Remove reactions that are missing a species: " +str(remove_reaction_missing_species)+ "</p>"
@@ -301,8 +356,11 @@ class Utils:
     Utils._create_dir(d)
     f = os.path.join (d, "models.json")
     if force or not os.path.isfile (f):
-      Utils.__logger.info('need to (re)download the list of models from biomodels')
-      urllib.request.urlretrieve (settings.URLS_BIOMODELS, f)
+      biomodels_url = settings.URLS_BIOMODELS
+      if 'http' not in biomodels_url:
+        copyfile (biomodels_url, f)
+      else:
+        urllib.request.urlretrieve (biomodels_url, f)
     if time.time() - os.path.getmtime(f) > settings.CACHE_BIOMODELS:
       return Utils.get_biomodels (True)
     try:
@@ -481,3 +539,11 @@ class Utils:
         return "%3.1f %s" % (byt, count)
       byt /= 1024.
     return "%3.1f %s" % (byt, 'PB')
+  
+  @staticmethod
+  def is_number (s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False

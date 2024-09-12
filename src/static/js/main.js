@@ -137,7 +137,7 @@ function updateNetwork () {
 	$("#gene-table tr").removeClass ("filter-inconsistent").removeClass ("filter-excluded");
 	$("#gene-complex-table tr").removeClass ("filter-inconsistent").removeClass ("filter-excluded").removeClass ("filter-supercomplex");
 	$("#gene-complex-table tr td:nth-child(2)").attr("title", "");
-	$(".fa-info-circle").hide().attr("title", "");
+	$(".w3-content .fa-info-circle").hide().attr("title", "");
 
 	// prepare inconsistency sets
 	var inconsistent = [new Set(),new Set(),new Set(),new Set()];
@@ -386,7 +386,7 @@ function get_reaction_ids (r_num) {
  * @param the initial filter
  * 
  */
-function fill_network_table (filter) {
+function fill_network_table (filter, fluxes, use_fluxes) {
 	// species
 	//~ for (var key in networks.original.species) {
 	for (var key = 0; key < networks.original.species.length; key++) {
@@ -402,17 +402,36 @@ function fill_network_table (filter) {
 	};
 	//reactions
 	//~ for (var key in networks.original.reactions) {
+	found_fluxes = 0;
 	for (var key = 0; key < networks.original.reactions.length; key++) {
 		//~ if (networks.original.reactions.hasOwnProperty(key)) {
 			const item = networks.original.reactions[key];
 			item.DOM = domIdMapper (item.id);
 			// is it filtered?
 			var checked = filter["filter_reactions"].includes(item.id) ? "" : " checked";
+			var flx = "";
+			if (use_fluxes) {
+				if (fluxes[item.id]) {
+					found_fluxes += 1;
+					flx = "<td>"+fluxes[item.id]+"</td>";
+				} else {
+					flx = "<td class='w3-red'>unknown</td>";
+				}
+			}
 			// create DOM row
-			const row = $("<tr id='"+item.DOM+"'><td class='check'><input type='checkbox'"+checked+"></td><td><abbr title='"+item.id+"'>"+truncate (item.id, 20)+"</abbr> <i class='fas fa-info-circle '></i></td><td><abbr title='"+item.name+"'>"+truncate (item.name)+"</abbr></td><td><small>"+get_species_ids (item.cons).join (" + ") + "</small> <i class='fas fa-arrow-right'></i> <small>" + get_species_ids (item.prod).join (" + ") +"</small></td><td><small>"+get_gene_ids (item.enzs).concat (get_genec_ids(item.enzc)).join ("</small> [OR] <small>") +"</small></td></tr>");
+			const row = $("<tr id='"+item.DOM+"'><td class='check'><input type='checkbox'"+checked+"></td><td><abbr title='"+item.id+"'>"+truncate (item.id, 20)+"</abbr> <i class='fas fa-info-circle '></i></td><td><abbr title='"+item.name+"'>"+truncate (item.name)+"</abbr></td><td><small>"+get_species_ids (item.cons).join (" + ") + "</small> <i class='fas fa-arrow-right'></i> <small>" + get_species_ids (item.prod).join (" + ") +"</small></td><td><small>"+get_gene_ids (item.enzs).concat (get_genec_ids(item.enzc)).join ("</small> [OR] <small>") +"</small></td>"+flx+"</tr>");
 			$('#reaction-table').append(row);
 		//~ }
 	};
+	if (use_fluxes) {
+		$("#fluxinfo_reactions").text (found_fluxes);
+		$("#fluxinfo_missing_reactions").text (networks.original.reactions.length - found_fluxes);
+		$("#fluxinfo_unused_fluxes").text (Object.keys(fluxes).length - found_fluxes);
+		$("#fluxinfo").show ();
+		if (networks.original.reactions.length - found_fluxes > 0 || Object.keys(fluxes).length - found_fluxes > 0) {
+			$("#fluxinfo").addClass ("w3-red");
+		}
+	}
 	// genes
 	//~ for (var key in networks.original.enzs) {
 	for (var key = 0; key < networks.original.enzs.length; key++) {
@@ -550,9 +569,14 @@ function loadNetwork () {
 			$("#filtercontainer").show ();
 			$("#loading").hide ();
 			$("#error").hide ();
+			
+			if (Object.keys(data.fluxes).length > 0) {
+				$("#flux_column").show ();
+			}
+			
 		  
 			// fill the filter tables
-			fill_network_table (data.filter);
+			fill_network_table (data.filter, data.fluxes, Object.keys(data.fluxes).length > 0);
 			updateNetwork ();
 		},
 		error: function (jqXHR, textStatus, errorThrown) {
@@ -593,6 +617,53 @@ function loadNetwork () {
 		
 		
 	});
+	
+	
+	$("#toggle-species").click (function (){
+		if ($('#species-table input:checkbox:checked').length < $('#species-table input:checkbox').length / 2) {
+				$('#species-table input:checkbox').prop('checked', true);
+		} else {
+				$('#species-table input:checkbox').prop('checked', false);
+		}
+		updateNetwork ();
+	});
+	$("#toggle-reactions").click (function (){
+		if ($('#reaction-table input:checkbox:checked').length < $('#reaction-table input:checkbox').length / 2) {
+				$('#reaction-table input:checkbox').prop('checked', true);
+		} else {
+				$('#reaction-table input:checkbox').prop('checked', false);
+		}
+		updateNetwork ();
+	});
+	$("#toggle-gene").click (function (){
+		if ($('#gene-table input:checkbox:checked').length < $('#gene-table input:checkbox').length / 2) {
+				$('#gene-table input:checkbox').prop('checked', true);
+		} else {
+				$('#gene-table input:checkbox').prop('checked', false);
+		}
+		updateNetwork ();
+	});
+	$("#toggle-gene-complex").click (function (){
+		if ($('#gene-complex-table input:checkbox:checked').length < $('#gene-complex-table input:checkbox').length / 2) {
+				$('#gene-complex-table input:checkbox').prop('checked', true);
+		} else {
+				$('#gene-complex-table input:checkbox').prop('checked', false);
+		}
+		updateNetwork ();
+	});
+	
+	
+	
+		
+		
+  $('#fbresults').change (function() {
+		var fileName = '';
+		fileName = $(this).val();
+		if (fileName.indexOf("\\") !== -1)
+			fileName = fileName.substring(fileName.lastIndexOf("\\") + 1, fileName.length);
+		$('#fbresults-name').html(fileName);
+	 });
+	 
 }
 
 /**
@@ -791,7 +862,7 @@ function prepareIndex () {
 					// if it was successful: build the table
 					for (var model of data.models) {
 						model.DOM = domIdMapper (model.id);
-						const row = $("<tr id='"+model.DOM+"'><td><a class='biomodels_id'>"+model.id+"</a></td><td>"+model.name+"</td></tr>");
+						const row = $("<tr id='"+model.DOM+"'><td><a class='biomodels_id'>"+model.id+"</a></td><td><abbr title='"+model.name+"'>"+truncate (model.name,50)+"<abbr></td><td>"+model.metabolites+"</td><td>"+model.reactions+"</td><td>"+model.genes+"</td></tr>");
 						$('#biomodels-table').append(row);
 					}
 			
@@ -836,6 +907,7 @@ function prepareIndex () {
 			fileName = fileName.substring(fileName.lastIndexOf("\\") + 1, fileName.length);
 		$('#upload-name').html(fileName);
 	 });
+	 
 }
 
 
@@ -886,3 +958,21 @@ function prepareImprint () {
 		});
 	});
 }
+
+
+
+function startIntro (toggleNaviMobi = false) {
+	if (toggleNaviMobi)
+		toggleNaviMobile ();
+	
+	introJs().onbeforechange(function(targetElement) {
+		let cb = targetElement.getAttribute("data-intro-clickbefore");
+		if (cb) {
+			preclicks = cb.split (",");
+			for (i = 0; i < preclicks.length; i++)
+				$("#" + preclicks[i]).click();
+		}
+	}).start();
+}
+
+

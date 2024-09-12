@@ -14,12 +14,13 @@ Hello
   Welcome to the <strong>GEMtractor</strong> &mdash; a platform for trimming and extracting genome-scale metabolic models (GEMs)!
 </p>
 <p>
-  The analyzations goes like this:
+  Farming with the GEMtractor goes like this:
   <ol>
-    <li><strong>Select an SBML model:</strong> Upload your model or choose a published model from BiGG Models or Biomodels.</li>
+    <li><strong>Select an SBML model:</strong> Upload your model or choose a published model from <a href="http://bigg.ucsd.edu/">BiGG Models</a> or <a href="https://www.ebi.ac.uk/biomodels/">Biomodels</a>.</li>
     <li><strong>Trim the model:</strong> Optionally delete (currency-)metabolites, reactions, genes, or enzyme complexes if you want to concentrate on a reduced version of the model.</li>
     <li><strong>Export the model:</strong> Optionally extract the enzyme-centric network before downloading the reduced model in different formats for subsequent analyses.</li>
   </ol>
+  If you get lost during farming just click the small <i class="fas fa-info-circle"></i> that will appear in the top menu bar. It will guide you through the current page.
 </p>
 <p>
   There is an <a href="{% url 'index:learn' %}#api">API</a>, so you may use the GEMtractor from your software tools. <strong>The GEMtractor is free software</strong> and also available as a Docker image. Thus, running your own GEMtractor is as easy as calling a single command line &mdash; including all the benefits, such as privacy and speed! Read more about the setup at <a href="{% url 'index:learn' %}#own-gemtractor">Run your own GEMtractor
@@ -32,9 +33,30 @@ Hello
   You seem to be using a mobile device? <strong>Please be aware, that there may be quite some data shipped through the network.</strong>
   So be careful on metered connections!
 </p>
+<blockquote class="paper">
+  GEMtractor was published in <a href="https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btaa068/5719024?guestAccessKey=e796dc2b-e503-4806-b879-38906345d7b3">GEMtractor: extracting views into genome-scale metabolic models</a> at Oxford Bioinformatics.
+  If you found GEMtractor useful for your analyses, please consider referencing it in your publications.
+</blockquote>
 <script>
 if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.screen.width < 1000) {
   $("#mobile-warning").show();
 }
 </script>
+<div class="w3-row sponsors w3-margin-top w3-padding-large">
+  <div class="w3-col m4 l4 w3-center">
+    <a href="https://www.sbi.uni-rostock.de/" target="_blank">
+      <img src="{% static 'pics/logos/sbi-w-text.png' %}"/>
+    </a>
+  </div>
+  <div class="w3-col m4 l4 w3-center">
+    <a href="https://www.uni-rostock.de/" target="_blank">
+      <img src="{% static 'pics/logos/UNI-Logo_Siegel_4c_115mm_07.png' %}"/>
+    </a>
+  </div>
+  <div class="w3-col m4 l4 w3-center">
+    <a href="https://www.bmbf.de/" target="_blank">
+      <img src="{% static 'pics/logos/BMBF_RGB_Gef_L_e.jpg' %}" style="max-height:80px;"/>
+    </a>
+  </div>
+</div>
 {% endblock %}

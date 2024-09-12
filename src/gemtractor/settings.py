@@ -237,9 +237,15 @@ CACHE_BIOMODELS_MODEL = parse_env_var ('CACHE_BIOMODELS_MODEL', 7*60*60*24)
 # urls for model retrieval
 URLS_BIGG_MODELS = "http://bigg.ucsd.edu/api/v2/models/"
 URLS_BIGG_MODEL = lambda model_id: "http://bigg.ucsd.edu/static/models/"+model_id+".xml"
-URLS_BIOMODELS = "https://www.ebi.ac.uk/biomodels/search?format=json&query=genome+scale+metabolic+model+AND+modelformat:%22SBML%22+NOT+%22nicolas+le%22&numResults=100&sort=id-asc"
+#URLS_BIOMODELS = "https://www.ebi.ac.uk/biomodels/search?format=json&query=genome+scale+metabolic+model+AND+modelformat:%22SBML%22+NOT+%22nicolas+le%22&numResults=100&sort=id-asc"
+URLS_BIOMODELS = "./static/biomodels-list.json"
 URLS_BIOMODEL_INFO = lambda model_id: "https://www.ebi.ac.uk/biomodels/"+model_id+"?format=json"
 URLS_BIOMODEL_SBML = lambda model_id, filename: "https://www.ebi.ac.uk/biomodels/model/download/"+model_id+"?filename="+filename
 
 # what's the max number of entities to allow in the browser
 MAX_ENTITIES_FILTER = parse_env_var ('MAX_ENTITIES_FILTER', 100000)
+
+# health secret to protect the healtmonitoring
+# if it is set, it must be sent as POST '{"secret": XXX}', otherwise /api/status won't export the health information
+HEALTH_SECRET = os.getenv ("HEALTH_SECRET", "")
+

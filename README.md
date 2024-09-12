@@ -1,6 +1,6 @@
 # GEMtractor
 
-The GEMtractor a platform for trimming and extracting genome-scale metabolic models (GEMs).
+The GEMtractor is a platform for trimming and extracting genome-scale metabolic models (GEMs).
 
 <object data="https://gemtractor.bio.informatik.uni-rostock.de/static/pics/gemtractor-landscape.svg" type="image/svg+xml">
   <img src="https://gemtractor.bio.informatik.uni-rostock.de//static/pics/gemtractor-landscape.png" title="GEMtractor" alt="GEMtractor" />
@@ -10,7 +10,7 @@ Using the GEMtractor you can trim (currency-)metabolites, reactions, genes, or e
 From the trimmed model you may then extract the Reaction-centric or Enzyme-centric network, wich can be exported in different graph formats for subsequent analyses.
 
 
-The GEMtractor comes with support for Docker -- installing an own instance is pretty easy, see <a href="https://gemtractor.bio.informatik.uni-rostock.de/learn/#own-gemtractor">Run your own GEMtractor</a>.
+The GEMtractor comes with support for Docker -- installing an own instance is pretty easy, see <a href="https://gemtractor.bio.informatik.uni-rostock.de/learn#own-gemtractor">Run your own GEMtractor</a>.
 It also features an <a href="https://gemtractor.bio.informatik.uni-rostock.de/learn#api">API</a>, so you may use the GEMtractor from your software tools.
 There is plenty of more information at the <a href="https://gemtractor.bio.informatik.uni-rostock.de/learn">FAQ</a> and the <a href="https://doc.bio.informatik.uni-rostock.de/GEMtractor/">Python documentation</a>.
 

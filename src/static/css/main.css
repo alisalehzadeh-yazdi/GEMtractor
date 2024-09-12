@@ -64,10 +64,15 @@ a.biomodels_id,
 a.bigg_id {
   border-bottom: 1px solid;
 }
+#toggle-species,
+#toggle-reactions,
+#toggle-gene,
+#toggle-gene-complex,
 a.biomodels_id:hover,
 a.bigg_id:hover {
  cursor:pointer;
 }
+#choose-public-model abbr,
 #filter-tables abbr {
   text-decoration: none;
 }
@@ -85,7 +90,7 @@ a.bigg_id:hover {
 .fa-sort {
   color: #6c8095;
 }
-.fa-info-circle {
+.w3-content .fa-info-circle {
   color: #bdc3c7;
 }
 .sorted-desc .fa-sort,
@@ -103,7 +108,7 @@ a.bigg_id:hover {
 #skeleton-tabs-top {
   margin-bottom: 30px;
 }
-#custom-model {
+#custom-model,#fbresults {
   display: none;
 }
 .prev,.next {
@@ -157,4 +162,23 @@ td, th {
 }
 .learn-image-network {
   max-width: 400px;
+}
+#flux_column, #fluxinfo {
+  display: none
+}
+.introjs-helperNumberLayer {
+  background: linear-gradient(to bottom,#5d94c8 0,#0c3176 100%) !important;
+}
+.sponsors div {
+  height: 80px;
+}
+.sponsors div a {
+  border: none
+}
+.sponsors img {
+  max-height: 65px;
+  max-width: 100%;
+}
+blockquote.paper {
+  font-style: italic
 }
